@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SabaToken (SABA)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Animated background canvas -->
+  <canvas id="particles"></canvas>
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="token-orb">
+        <div class="orb-ring ring1"></div>
+        <div class="orb-ring ring2"></div>
+        <div class="orb-ring ring3"></div>
+        <div class="orb-core">S</div>
+      </div>
+      <h1 class="hero-title">SabaToken</h1>
+      <span class="badge">SABA</span>
+      <p class="hero-sub">A custom ERC-20 token deployed on the Ethereum Sepolia testnet.</p>
+
+      <div class="hero-btns">
+        <button id="connectBtn" onclick="connectWallet()">🔗 Connect Wallet</button>
+        <a href="https://sepolia.etherscan.io/address/0xdc8b1AC60aA8b3D53Bdda6C9865a1011e5237D76"
+           target="_blank" class="btn-outline">🔍 View on Etherscan</a>
+      </div>
+
+      <div id="walletInfo" class="wallet-pill hidden">
+        <span>📬 <span id="walletAddress"></span></span>
+        <span class="divider">|</span>
+        <span>💰 <strong><span id="tokenBalance">0</span> SABA</strong></span>
+      </div>
+    </div>
+
+    <div class="scroll-hint">
+      <span>Scroll to explore</span>
+      <div class="chevron"></div>
+    </div>
+  </section>
+
+  <!-- ── STATS STRIP ── -->
+  <section class="stats-strip reveal">
+    <div class="stat">
+      <span class="stat-num" data-count="1000000">0</span>
+      <span class="stat-label">Total Supply</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <span class="stat-num">18</span>
+      <span class="stat-label">Decimals</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <span class="stat-num">ERC-20</span>
+      <span class="stat-label">Standard</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <span class="stat-num">Sepolia</span>
+      <span class="stat-label">Network</span>
+    </div>
+  </section>
+
+  <!-- ── INFO CARDS (stacked, scroll-reveal) ── -->
+  <section class="cards-section">
+
+    <div class="info-card reveal slide-left">
+      <div class="info-card-icon">🪙</div>
+      <div class="info-card-body">
+        <h3>Token Name</h3>
+        <p class="info-value">SabaToken</p>
+        <p class="info-desc">The full name of the token registered on the blockchain.</p>
+      </div>
+      <div class="info-card-glow"></div>
+    </div>
+
+    <div class="info-card reveal slide-right">
+      <div class="info-card-icon">🔖</div>
+      <div class="info-card-body">
+        <h3>Ticker Symbol</h3>
+        <p class="info-value">SABA</p>
+        <p class="info-desc">The shorthand symbol used to identify SabaToken in wallets and exchanges.</p>
+      </div>
+      <div class="info-card-glow"></div>
+    </div>
+
+    <div class="info-card reveal slide-left">
+      <div class="info-card-icon">📦</div>
+      <div class="info-card-body">
+        <h3>Total Supply</h3>
+        <p class="info-value">1,000,000 SABA</p>
+        <p class="info-desc">All tokens were minted to the deployer's wallet at contract creation.</p>
+      </div>
+      <div class="info-card-glow"></div>
+    </div>
+
+    <div class="info-card reveal slide-right">
+      <div class="info-card-icon">🌐</div>
+      <div class="info-card-body">
+        <h3>Network</h3>
+        <p class="info-value">Ethereum Sepolia</p>
+        <p class="info-desc">Deployed on the Sepolia testnet — Ethereum's primary test environment.</p>
+      </div>
+      <div class="info-card-glow"></div>
+    </div>
+
+    <div class="info-card reveal slide-left">
+      <div class="info-card-icon">📜</div>
+      <div class="info-card-body">
+        <h3>Standard</h3>
+        <p class="info-value">ERC-20 via OpenZeppelin</p>
+        <p class="info-desc">Built using OpenZeppelin's audited ERC-20 library for maximum security and compatibility.</p>
+      </div>
+      <div class="info-card-glow"></div>
+    </div>
+
+  </section>
+
+  <!-- ── CONTRACT ADDRESS ── -->
+  <section class="contract-section reveal slide-up">
+    <div class="contract-inner">
+      <div class="contract-label">📍 Contract Address on Sepolia</div>
+      <div class="contract-box">
+        <span id="contractAddr">0xdc8b1AC60aA8b3D53Bdda6C9865a1011e5237D76</span>
+        <button class="copy-btn" onclick="copyAddress()">📋 Copy</button>
+      </div>
+      <a href="https://sepolia.etherscan.io/address/0xdc8b1AC60aA8b3D53Bdda6C9865a1011e5237D76"
+         target="_blank" class="etherscan-link">🔍 View on Sepolia Etherscan ↗</a>
+    </div>
+  </section>
+
+  <!-- ── ABOUT ── -->
+  <section class="about-section reveal slide-up">
+    <div class="about-inner">
+      <h2>About SabaToken</h2>
+      <p>
+        SabaToken (SABA) is a custom ERC-20 token built using the OpenZeppelin
+        smart contract library and deployed on the Ethereum Sepolia testnet.
+        It was created as part of a blockchain development assignment to
+        demonstrate the full lifecycle of token creation — from writing a
+        Solidity smart contract to deploying it live using Hardhat and Alchemy.
+      </p>
+      <p>
+        The token has a fixed initial supply of <strong>1,000,000 SABA</strong>,
+        all minted to the deployer's wallet at launch. The contract owner can
+        also mint additional tokens as needed using the built-in mint function.
+      </p>
+      <div class="tech-stack">
+        <span>Solidity</span>
+        <span>OpenZeppelin</span>
+        <span>Hardhat</span>
+        <span>Alchemy</span>
+        <span>Ethereum</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer class="reveal">
+    <p>Built with <span class="accent">Kiro AI</span> · Deployed on <span class="accent">Ethereum Sepolia</span> · Hosted on <span class="accent">Cloudflare Pages</span></p>
+  </footer>
+
+  <!-- ── AI CHATBOT WIDGET ── -->
+  <div id="chatWidget" class="chat-widget">
+    <!-- Chat Bubble FAB -->
+    <button id="chatFab" class="chat-fab" onclick="toggleChat()">
+      <span class="fab-icon">💬</span>
+    </button>
+
+    <!-- Chat Window Container -->
+    <div id="chatWindow" class="chat-window hidden">
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <div class="chat-header-info">
+          <div class="chat-avatar">🤖</div>
+          <div>
+            <h4>SABA AI Assistant</h4>
+            <span class="status-indicator online">Online</span>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="header-btn" title="Close" onclick="toggleChat()">✕</button>
+        </div>
+      </div>
+
+      <!-- Chat Messages Area -->
+      <div id="chatMessages" class="chat-messages">
+        <!-- Messages will be injected here dynamically -->
+      </div>
+
+      <!-- Quick Suggestions Bar -->
+      <div class="chat-suggestions" id="chatSuggestions">
+        <button class="suggestion-pill" onclick="sendSuggestion('What is SabaToken (SABA)?')">🪙 What is SABA?</button>
+        <button class="suggestion-pill" onclick="sendSuggestion('How can I check my SABA balance?')">💼 How to check balance?</button>
+        <button class="suggestion-pill" onclick="sendSuggestion('What is the contract address?')">📜 Contract Addr</button>
+      </div>
+
+      <!-- Chat Input Form -->
+      <form id="chatForm" class="chat-input-area" onsubmit="handleChatSubmit(event)">
+        <input type="text" id="chatInput" placeholder="Ask about SabaToken..." autocomplete="off" />
+        <button type="submit" id="sendBtn" class="send-btn" title="Send Message">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

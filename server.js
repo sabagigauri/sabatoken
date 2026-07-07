@@ -9,6 +9,7 @@ const PORT = process.env.PORT || 3001;
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.use(express.static('my-token-website'));
 
 // API route for chat requests
 app.post('/api/chat', async (req, res) => {

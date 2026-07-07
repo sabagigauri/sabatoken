@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "node -e \"const fs = require('fs'); let js = fs.readFileSync('my-token-website/script.js', 'utf8'); js = js.replace('__GEMINI_API_KEY__', process.env.GEMINI_API_KEY); fs.writeFileSync('my-token-website/script.js', js);\"",
+    "build": "node -r dotenv/config -e \"const fs = require('fs'); let js = fs.readFileSync('my-token-website/script.js', 'utf8'); if (process.env.GEMINI_API_KEY) { js = js.replace('__GEMINI_API_KEY__', process.env.GEMINI_API_KEY); fs.writeFileSync('my-token-website/script.js', js); console.log('Successfully injected GEMINI_API_KEY into script.js.'); } else { console.log('Warning: GEMINI_API_KEY is not defined in the environment. Skipping key injection.'); }\"",
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

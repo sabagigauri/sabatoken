@@ -280,7 +280,18 @@ Guidelines:
 6. The model you are running on is Gemini 2.5 Flash.`;
 
   try {
-    const response = await fetch(API_URL, {
+    let url = API_URL;
+    const isKeyPlaceholder = GEMINI_API_KEY === "__GEMINI_API_KEY__" || GEMINI_API_KEY === "undefined" || !GEMINI_API_KEY;
+
+    if (isKeyPlaceholder) {
+      url = "/api/chat";
+      // If run locally via file:// protocol or a different port (e.g. port 5500 Live Server), target the proxy port explicitly.
+      if (location.protocol === "file:" || (location.hostname === "localhost" && location.port !== "3001" && location.port !== "")) {
+        url = "http://localhost:3001/api/chat";
+      }
+    }
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

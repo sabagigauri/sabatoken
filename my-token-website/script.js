@@ -100,11 +100,115 @@ document.querySelectorAll(".stats-strip").forEach((el) => stripObserver.observe(
 
 
 /* ══════════════════════════════════════
-   WALLET CONNECTION
-══════════════════════════════════════ */
+   WALLET CONNECTION & TOKEN TRANSFER
+   ══════════════════════════════════════ */
 const CONTRACT_ADDRESS = "0xdc8b1AC60aA8b3D53Bdda6C9865a1011e5237D76";
+const SEPOLIA_CHAIN_ID = "0xaa36a7"; // Chain ID 11155111
 let currentWalletAddress = null;
 let currentTokenBalance = "0";
+let rawTokenBalance = 0n; // Store raw balance as BigInt for exact comparison
+
+// Check if connected network is Sepolia, if not, prompt user to switch
+async function checkAndSwitchNetwork() {
+  if (typeof window.ethereum === "undefined") return false;
+  
+  try {
+    const chainId = await window.ethereum.request({ method: "eth_chainId" });
+    if (chainId !== SEPOLIA_CHAIN_ID) {
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: SEPOLIA_CHAIN_ID }],
+        });
+        return true;
+      } catch (switchError) {
+        // Error code 4902 indicates that the network has not been added to MetaMask.
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [
+                {
+                  chainId: SEPOLIA_CHAIN_ID,
+                  chainName: "Sepolia Test Network",
+                  nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
+                  rpcUrls: ["https://sepolia.infura.io/v3/"],
+                  blockExplorerUrls: ["https://sepolia.etherscan.io"],
+                },
+              ],
+            });
+            return true;
+          } catch (addError) {
+            console.error("Failed to add Sepolia network:", addError);
+            alert("Please switch your MetaMask network to Ethereum Sepolia to interact with SabaToken.");
+            return false;
+          }
+        } else {
+          console.error("Failed to switch to Sepolia network:", switchError);
+          alert("Please switch your MetaMask network to Ethereum Sepolia to interact with SabaToken.");
+          return false;
+        }
+      }
+    }
+    return true;
+  } catch (err) {
+    console.error("Error checking network status:", err);
+    return false;
+  }
+}
+
+// Convert a BigInt raw balance into a user-friendly decimal string without float rounding issues
+function formatTokenBalance(balanceBigInt, decimals = 18) {
+  const balanceStr = balanceBigInt.toString();
+  if (balanceStr === "0") return "0";
+  
+  if (balanceStr.length <= decimals) {
+    const fractional = balanceStr.padStart(decimals, "0");
+    const trimmedFractional = fractional.replace(/0+$/, "");
+    return trimmedFractional.length > 0 ? `0.${trimmedFractional}` : "0";
+  } else {
+    const wholePart = balanceStr.slice(0, balanceStr.length - decimals);
+    const fractionalPart = balanceStr.slice(balanceStr.length - decimals);
+    const trimmedFractional = fractionalPart.replace(/0+$/, "");
+    return trimmedFractional.length > 0 ? `${Number(wholePart).toLocaleString()}.${trimmedFractional}` : Number(wholePart).toLocaleString();
+  }
+}
+
+// Parse a human decimal string (e.g. 1.25) to standard uint256 BigInt format
+function parseAmountToBigInt(amountStr, decimals = 18) {
+  const cleanStr = amountStr.replace(/,/g, "").trim();
+  let [whole, fractional] = cleanStr.split('.');
+  if (!whole) whole = '0';
+  if (!fractional) fractional = '';
+  
+  fractional = fractional.slice(0, decimals);
+  fractional = fractional.padEnd(decimals, '0');
+  
+  return BigInt(whole + fractional);
+}
+
+// Fetch balance from contract using eth_call
+async function updateBalance() {
+  if (!currentWalletAddress) return;
+  try {
+    const balanceHex = await window.ethereum.request({
+      method: "node_modules" in window ? "eth_call" : "eth_call", // fallback check
+      params: [
+        {
+          to: CONTRACT_ADDRESS,
+          data: "0x70a08231" + "000000000000000000000000" + currentWalletAddress.slice(2).toLowerCase(),
+        },
+        "latest",
+      ],
+    });
+
+    rawTokenBalance = BigInt(balanceHex || "0x0");
+    currentTokenBalance = formatTokenBalance(rawTokenBalance);
+    document.getElementById("tokenBalance").textContent = currentTokenBalance;
+  } catch (err) {
+    console.error("Error fetching SABA balance:", err);
+  }
+}
 
 async function connectWallet() {
   if (typeof window.ethereum === "undefined") {
@@ -112,34 +216,26 @@ async function connectWallet() {
     return;
   }
   try {
+    const networkSwitched = await checkAndSwitchNetwork();
+    if (!networkSwitched) return;
+
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     const userAddress = accounts[0];
+    currentWalletAddress = userAddress;
+
+    await updateBalance();
 
     const short = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
     document.getElementById("walletAddress").textContent = short;
-
-    // Read SABA balance via eth_call
-    const balanceHex = await window.ethereum.request({
-      method: "eth_call",
-      params: [
-        {
-          to: CONTRACT_ADDRESS,
-          data: "0x70a08231" + "000000000000000000000000" + userAddress.slice(2).toLowerCase(),
-        },
-        "latest",
-      ],
-    });
-
-    const rawBalance = BigInt(balanceHex || "0x0");
-    const readable = (rawBalance / BigInt(10 ** 18)).toLocaleString();
-
-    currentWalletAddress = userAddress;
-    currentTokenBalance = readable;
-
-    document.getElementById("tokenBalance").textContent = readable;
     document.getElementById("connectBtn").textContent = "✅ Connected";
     document.getElementById("connectBtn").disabled = true;
     document.getElementById("walletInfo").classList.remove("hidden");
+
+    // Reveal Transfer form and hide the connect prompt
+    const sendFormWrapper = document.getElementById("sendFormWrapper");
+    const sendConnectPrompt = document.getElementById("sendConnectPrompt");
+    if (sendFormWrapper) sendFormWrapper.classList.remove("hidden");
+    if (sendConnectPrompt) sendConnectPrompt.classList.add("hidden");
   } catch (err) {
     console.error(err);
     alert("Failed to connect: " + err.message);
@@ -156,6 +252,166 @@ function copyAddress() {
     const original = btn.textContent;
     btn.textContent = "✅ Copied!";
     setTimeout(() => (btn.textContent = original), 2000);
+  });
+}
+
+// Handle transaction submit to transfer SABA tokens to another address
+async function handleTransfer(e) {
+  if (e) e.preventDefault();
+  
+  const recipientInput = document.getElementById("recipientAddress");
+  const amountInput = document.getElementById("transferAmount");
+  const statusEl = document.getElementById("transferStatus");
+  const submitBtn = document.getElementById("sendSubmitBtn");
+  
+  const recipient = recipientInput.value.trim();
+  const amountStr = amountInput.value.trim();
+  
+  // Clear previous status
+  statusEl.className = "status-msg";
+  statusEl.innerHTML = "";
+  
+  // Basic validation: Ethereum Address regex
+  const isAddress = /^0x[a-fA-F0-9]{40}$/.test(recipient);
+  if (!isAddress) {
+    statusEl.className = "status-msg error";
+    statusEl.textContent = "Error: Invalid recipient address format. It must be a 42-character hex address starting with 0x.";
+    return;
+  }
+  
+  // Basic validation: Positive amount
+  if (!amountStr || parseFloat(amountStr) <= 0) {
+    statusEl.className = "status-msg error";
+    statusEl.textContent = "Error: Transfer amount must be greater than zero.";
+    return;
+  }
+  
+  const amountBigInt = parseAmountToBigInt(amountStr);
+  
+  // Validate insufficient balance
+  if (amountBigInt > rawTokenBalance) {
+    statusEl.className = "status-msg error";
+    statusEl.textContent = `Error: Insufficient balance. You are trying to send ${amountStr} SABA but only have ${currentTokenBalance} SABA.`;
+    return;
+  }
+  
+  try {
+    const networkSwitched = await checkAndSwitchNetwork();
+    if (!networkSwitched) return;
+    
+    // Set loading state
+    submitBtn.disabled = true;
+    submitBtn.textContent = "⏳ Processing...";
+    statusEl.className = "status-msg info";
+    statusEl.textContent = "Please confirm the transaction signature request in MetaMask...";
+    
+    // Encode ERC20 transfer(address,uint256) data payload
+    // Method selector: 0xa9059cbb
+    const recipientHex = recipient.replace(/^0x/, "").toLowerCase().padStart(64, "0");
+    const amountHex = amountBigInt.toString(16).padStart(64, "0");
+    const dataHex = "0xa9059cbb" + recipientHex + amountHex;
+    
+    const transactionParameters = {
+      to: CONTRACT_ADDRESS,
+      from: currentWalletAddress,
+      data: dataHex,
+    };
+    
+    const txHash = await window.ethereum.request({
+      method: "eth_sendTransaction",
+      params: [transactionParameters],
+    });
+    
+    statusEl.className = "status-msg info";
+    statusEl.innerHTML = `Transaction submitted! Pending blockchain confirmation...<br><a href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank">🔍 View on Sepolia Etherscan ↗</a>`;
+    
+    // Poll for transaction receipt confirmation (mined status)
+    let mined = false;
+    let retries = 0;
+    
+    while (!mined && retries < 30) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      retries++;
+      
+      try {
+        const receipt = await window.ethereum.request({
+          method: "eth_getTransactionReceipt",
+          params: [txHash],
+        });
+        
+        if (receipt) {
+          mined = true;
+          // Status 0x1 is success
+          if (receipt.status === "0x1" || receipt.status === 1) {
+            statusEl.className = "status-msg success";
+            statusEl.innerHTML = `🎉 Success! Sent ${amountStr} SABA to ${recipient.slice(0, 6)}...${recipient.slice(-4)}.<br><a href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank">🔍 View on Sepolia Etherscan ↗</a>`;
+            
+            // Clear input fields
+            recipientInput.value = "";
+            amountInput.value = "";
+            
+            // Refresh balance
+            await updateBalance();
+          } else {
+            statusEl.className = "status-msg error";
+            statusEl.innerHTML = `❌ Transaction reverted by the contract.<br><a href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank">🔍 View on Sepolia Etherscan ↗</a>`;
+          }
+        }
+      } catch (receiptErr) {
+        console.error("Error checking receipt status:", receiptErr);
+      }
+    }
+    
+    if (!mined) {
+      statusEl.className = "status-msg info";
+      statusEl.innerHTML = `Transaction is taking a while to confirm. You can track its status here:<br><a href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank">🔍 View on Sepolia Etherscan ↗</a>`;
+      recipientInput.value = "";
+      amountInput.value = "";
+      setTimeout(updateBalance, 5000);
+    }
+  } catch (err) {
+    console.error("Transfer transaction failed:", err);
+    statusEl.className = "status-msg error";
+    if (err.code === 4001) {
+      statusEl.textContent = "Transaction rejected: User denied transaction signature request in MetaMask.";
+    } else {
+      statusEl.textContent = "Error: " + (err.message || "Failed to submit transaction.");
+    }
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "💸 Send Tokens";
+  }
+}
+
+// Listen to MetaMask account and chain changes automatically to sync interface
+if (typeof window.ethereum !== "undefined") {
+  window.ethereum.on("accountsChanged", (accounts) => {
+    if (accounts.length === 0) {
+      currentWalletAddress = null;
+      document.getElementById("walletInfo").classList.add("hidden");
+      document.getElementById("connectBtn").textContent = "🔗 Connect Wallet";
+      document.getElementById("connectBtn").disabled = false;
+      
+      const sendFormWrapper = document.getElementById("sendFormWrapper");
+      const sendConnectPrompt = document.getElementById("sendConnectPrompt");
+      if (sendFormWrapper) sendFormWrapper.classList.add("hidden");
+      if (sendConnectPrompt) sendConnectPrompt.classList.remove("hidden");
+    } else {
+      currentWalletAddress = accounts[0];
+      const short = currentWalletAddress.slice(0, 6) + "..." + currentWalletAddress.slice(-4);
+      document.getElementById("walletAddress").textContent = short;
+      
+      const sendFormWrapper = document.getElementById("sendFormWrapper");
+      const sendConnectPrompt = document.getElementById("sendConnectPrompt");
+      if (sendFormWrapper) sendFormWrapper.classList.remove("hidden");
+      if (sendConnectPrompt) sendConnectPrompt.classList.add("hidden");
+      
+      updateBalance();
+    }
+  });
+
+  window.ethereum.on("chainChanged", () => {
+    window.location.reload();
   });
 }
 
@@ -267,6 +523,7 @@ SabaToken Details:
 - Standard: ERC-20 via OpenZeppelin.
 - Built by Saba using Solidity, OpenZeppelin, Hardhat, Alchemy.
 - Deployed on Sepolia testnet, hosted on Cloudflare Pages.
+- Sending SABA: The website has a "Send SabaToken (SABA)" form right under the Contract Address section. Connected users can enter a recipient address and amount to transfer SABA tokens directly through MetaMask.
 
 User Wallet Status:
 ${currentWalletAddress ? `- Connected Wallet Address: ${currentWalletAddress}\n- SABA Token Balance: ${currentTokenBalance} SABA` : '- No wallet connected yet. They can click "Connect Wallet" at the top of the page to connect MetaMask.'}

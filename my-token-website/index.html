@@ -134,6 +134,38 @@
     </div>
   </section>
 
+  <!-- ── SEND TOKENS ── -->
+  <section class="send-section reveal slide-up">
+    <div class="send-inner">
+      <h2 class="send-title">Send SabaToken (SABA)</h2>
+      <p class="send-subtitle">Transfer SABA tokens directly to another wallet address on the Sepolia network.</p>
+      
+      <!-- Connect Wallet Prompt (shown if disconnected) -->
+      <div id="sendConnectPrompt" class="send-prompt">
+        <p>Please connect your wallet first to enable token transfers.</p>
+        <button class="submit-btn" style="max-width: 250px; margin: 16px auto 0;" onclick="connectWallet()">🔗 Connect Wallet</button>
+      </div>
+
+      <!-- Transfer Form wrapper (hidden by default, shown when connected) -->
+      <div id="sendFormWrapper" class="hidden">
+        <form id="transferForm" class="send-form" onsubmit="handleTransfer(event)">
+          <div class="form-group">
+            <label for="recipientAddress">Recipient Address</label>
+            <input type="text" id="recipientAddress" class="form-input" placeholder="0x..." required />
+          </div>
+          <div class="form-group">
+            <label for="transferAmount">Amount (SABA)</label>
+            <input type="number" id="transferAmount" class="form-input" placeholder="0.0" step="any" min="0" required />
+          </div>
+          <div class="send-btn-container">
+            <button type="submit" id="sendSubmitBtn" class="submit-btn">💸 Send Tokens</button>
+          </div>
+        </form>
+        <div id="transferStatus" class="status-msg"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ── ABOUT ── -->
   <section class="about-section reveal slide-up">
     <div class="about-inner">
